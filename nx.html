@@ -1,0 +1,618 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="385">385</option>
+                                
+                                    <option value="386">386</option>
+                                
+                                    <option value="130">130</option>
+                                
+                                    <option value="132">132</option>
+                                
+                                    <option value="389">389</option>
+                                
+                                    <option value="134">134</option>
+                                
+                                    <option value="261">261</option>
+                                
+                                    <option value="269">269</option>
+                                
+                                    <option value="143">143</option>
+                                
+                                    <option value="161">161</option>
+                                
+                                    <option value="417">417</option>
+                                
+                                    <option value="301">301</option>
+                                
+                                    <option value="188">188</option>
+                                
+                                    <option value="190">190</option>
+                                
+                                    <option value="318">318</option>
+                                
+                                    <option value="192">192</option>
+                                
+                                    <option value="452">452</option>
+                                
+                                    <option value="324">324</option>
+                                
+                                    <option value="335">335</option>
+                                
+                                    <option value="343">343</option>
+                                
+                                    <option value="350">350</option>
+                                
+                                    <option value="354">354</option>
+                                
+                                    <option value="103">103</option>
+                                
+                                    <option value="105">105</option>
+                                
+                                    <option value="113">113</option>
+                                
+                                    <option value="242">242</option>
+                                
+                                    <option value="116">116</option>
+                                
+                                    <option value="244">244</option>
+                                
+                                    <option value="245">245</option>
+                                
+                                    <option value="382">382</option>
+                                
+                                    <option value="322">322</option>
+                                
+                                    <option value="399">399</option>
+                                
+                                    <option value="276">276</option>
+                                
+                                    <option value="428">428</option>
+                                
+                                    <option value="208">208</option>
+                                
+                                    <option value="137">137</option>
+                                
+                                    <option value="92">92</option>
+                                
+                                    <option value="370">370</option>
+                                
+                                    <option value="246">246</option>
+                                
+                                    <option value="254">254</option>
+                                
+                                    <option value="393">393</option>
+                                
+                                    <option value="461">461</option>
+                                
+                                    <option value="111">111</option>
+                                
+                                    <option value="303">303</option>
+                                
+                                    <option value="400">400</option>
+                                
+                                    <option value="401">401</option>
+                                
+                                    <option value="147">147</option>
+                                
+                                    <option value="215">215</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"centrality_between": 0.0033203972448132063, "centrality_dgr": 0.270042194092827, "centrality_eig": 0.15261404113329607, "color": "#97c2fc", "dgr": 128, "id": 385, "label": 385, "shape": "dot", "size": 10, "username": "RepJohnRose"}, {"centrality_between": 0.004211695059876853, "centrality_dgr": 0.23206751054852318, "centrality_eig": 0.12546098113895465, "color": "#97c2fc", "dgr": 110, "id": 386, "label": 386, "shape": "dot", "size": 10, "username": "RepRosendale"}, {"centrality_between": 0.004051588875379127, "centrality_dgr": 0.16877637130801687, "centrality_eig": 0.07599489688810072, "color": "#97c2fc", "dgr": 80, "id": 130, "label": 130, "shape": "dot", "size": 10, "username": "RepKenBuck"}, {"centrality_between": 0.002704340715319443, "centrality_dgr": 0.19831223628691982, "centrality_eig": 0.09822283058697386, "color": "#97c2fc", "dgr": 94, "id": 132, "label": 132, "shape": "dot", "size": 10, "username": "RepTedBudd"}, {"centrality_between": 0.011770357581061843, "centrality_dgr": 0.2932489451476793, "centrality_eig": 0.13679554894194895, "color": "#97c2fc", "dgr": 139, "id": 389, "label": 389, "shape": "dot", "size": 10, "username": "RepChipRoy"}, {"centrality_between": 0.007127034728172332, "centrality_dgr": 0.20464135021097044, "centrality_eig": 0.08720226175205432, "color": "#97c2fc", "dgr": 97, "id": 134, "label": 134, "shape": "dot", "size": 10, "username": "michaelcburgess"}, {"centrality_between": 0.0010540975980061565, "centrality_dgr": 0.14135021097046413, "centrality_eig": 0.08442886569559357, "color": "#97c2fc", "dgr": 67, "id": 261, "label": 261, "shape": "dot", "size": 10, "username": "RepJacobs"}, {"centrality_between": 0.011212731714772457, "centrality_dgr": 0.34388185654008435, "centrality_eig": 0.15987450909251819, "color": "#97c2fc", "dgr": 163, "id": 269, "label": 269, "shape": "dot", "size": 10, "username": "RepMikeJohnson"}, {"centrality_between": 0.009922469494726508, "centrality_dgr": 0.22995780590717296, "centrality_eig": 0.10729561401262439, "color": "#97c2fc", "dgr": 109, "id": 143, "label": 143, "shape": "dot", "size": 10, "username": "RepBuddyCarter"}, {"centrality_between": 0.0014001615301606919, "centrality_dgr": 0.1371308016877637, "centrality_eig": 0.07605082786463038, "color": "#97c2fc", "dgr": 65, "id": 161, "label": 161, "shape": "dot", "size": 10, "username": "Rep_Clyde"}, {"centrality_between": 0.006091909916316514, "centrality_dgr": 0.19831223628691982, "centrality_eig": 0.0915352874638288, "color": "#97c2fc", "dgr": 94, "id": 417, "label": 417, "shape": "dot", "size": 10, "username": "RepAdrianSmith"}, {"centrality_between": 0.003129266966072919, "centrality_dgr": 0.20253164556962022, "centrality_eig": 0.10591994474034297, "color": "#97c2fc", "dgr": 96, "id": 301, "label": 301, "shape": "dot", "size": 10, "username": "RepDLesko"}, {"centrality_between": 0.009051119188504956, "centrality_dgr": 0.29535864978902954, "centrality_eig": 0.13436485278914878, "color": "#97c2fc", "dgr": 140, "id": 188, "label": 188, "shape": "dot", "size": 10, "username": "RepDonaldsPress"}, {"centrality_between": 0.007466457344238106, "centrality_dgr": 0.3312236286919831, "centrality_eig": 0.17202920711885605, "color": "#97c2fc", "dgr": 157, "id": 190, "label": 190, "shape": "dot", "size": 10, "username": "RepJeffDuncan"}, {"centrality_between": 0.004397374495263924, "centrality_dgr": 0.19831223628691982, "centrality_eig": 0.08768454876708395, "color": "#97c2fc", "dgr": 94, "id": 318, "label": 318, "shape": "dot", "size": 10, "username": "RepThomasMassie"}, {"centrality_between": 0.012651693134200127, "centrality_dgr": 0.3122362869198312, "centrality_eig": 0.1482315320475691, "color": "#97c2fc", "dgr": 148, "id": 192, "label": 192, "shape": "dot", "size": 10, "username": "RepTomEmmer"}, {"centrality_between": 0.005917323095656856, "centrality_dgr": 0.2172995780590717, "centrality_eig": 0.0931367597792501, "color": "#97c2fc", "dgr": 103, "id": 452, "label": 452, "shape": "dot", "size": 10, "username": "RepBethVanDuyne"}, {"centrality_between": 0.003984103181072589, "centrality_dgr": 0.22362869198312235, "centrality_eig": 0.12886744211767856, "color": "#97c2fc", "dgr": 106, "id": 324, "label": 324, "shape": "dot", "size": 10, "username": "RepLisaMcClain"}, {"centrality_between": 0.017752747790576638, "centrality_dgr": 0.310126582278481, "centrality_eig": 0.12278318955751567, "color": "#97c2fc", "dgr": 147, "id": 335, "label": 335, "shape": "dot", "size": 10, "username": "RepMMM"}, {"centrality_between": 0.0038568753007073666, "centrality_dgr": 0.1751054852320675, "centrality_eig": 0.08075210179215717, "color": "#97c2fc", "dgr": 83, "id": 343, "label": 343, "shape": "dot", "size": 10, "username": "RepMullin"}, {"centrality_between": 0.007092371851907089, "centrality_dgr": 0.24894514767932488, "centrality_eig": 0.1084657563499946, "color": "#97c2fc", "dgr": 118, "id": 350, "label": 350, "shape": "dot", "size": 10, "username": "RepTroyNehls"}, {"centrality_between": 0.0035828915235972506, "centrality_dgr": 0.20253164556962022, "centrality_eig": 0.0846371201970526, "color": "#97c2fc", "dgr": 96, "id": 354, "label": 354, "shape": "dot", "size": 10, "username": "RepRalphNorman"}, {"centrality_between": 0.001880010851753813, "centrality_dgr": 0.14556962025316456, "centrality_eig": 0.08196034213809385, "color": "#97c2fc", "dgr": 69, "id": 103, "label": 103, "shape": "dot", "size": 10, "username": "RepJimBaird"}, {"centrality_between": 0.007933919811762334, "centrality_dgr": 0.2573839662447257, "centrality_eig": 0.07362742197858367, "color": "#97c2fc", "dgr": 122, "id": 105, "label": 105, "shape": "dot", "size": 10, "username": "RepJimBanks"}, {"centrality_between": 0.012721704743944165, "centrality_dgr": 0.2995780590717299, "centrality_eig": 0.12793308077287288, "color": "#97c2fc", "dgr": 142, "id": 113, "label": 113, "shape": "dot", "size": 10, "username": "RepAndyBiggsAZ"}, {"centrality_between": 0.0037470352002050796, "centrality_dgr": 0.22362869198312235, "centrality_eig": 0.1237001212031163, "color": "#97c2fc", "dgr": 106, "id": 242, "label": 242, "shape": "dot", "size": 10, "username": "RepHartzler"}, {"centrality_between": 0.0030358602823748844, "centrality_dgr": 0.20253164556962022, "centrality_eig": 0.10645290616930897, "color": "#97c2fc", "dgr": 96, "id": 116, "label": 116, "shape": "dot", "size": 10, "username": "RepDanBishop"}, {"centrality_between": 0.001491745086036853, "centrality_dgr": 0.1962025316455696, "centrality_eig": 0.12364294501360862, "color": "#97c2fc", "dgr": 93, "id": 244, "label": 244, "shape": "dot", "size": 10, "username": "repkevinhern"}, {"centrality_between": 0.0053512827276522, "centrality_dgr": 0.20253164556962022, "centrality_eig": 0.08009609031671759, "color": "#97c2fc", "dgr": 96, "id": 245, "label": 245, "shape": "dot", "size": 10, "username": "RepHerrell"}, {"centrality_between": 0.004320082424044313, "centrality_dgr": 0.19831223628691982, "centrality_eig": 0.10349381529853963, "color": "#97c2fc", "dgr": 94, "id": 382, "label": 382, "shape": "dot", "size": 10, "username": "RepTomRice"}, {"centrality_between": 0.07304129664896897, "centrality_dgr": 0.5991561181434598, "centrality_eig": 0.17722011722287775, "color": "#97c2fc", "dgr": 284, "id": 322, "label": 322, "shape": "dot", "size": 10, "username": "GOPLeader"}, {"centrality_between": 0.012466118852724922, "centrality_dgr": 0.32067510548523204, "centrality_eig": 0.10535389206629989, "color": "#97c2fc", "dgr": 152, "id": 399, "label": 399, "shape": "dot", "size": 10, "username": "SteveScalise"}, {"centrality_between": 0.002548290787906967, "centrality_dgr": 0.14767932489451477, "centrality_eig": 0.08397439349109624, "color": "#97c2fc", "dgr": 70, "id": 276, "label": 276, "shape": "dot", "size": 10, "username": "RepFredKeller"}, {"centrality_between": 0.011827069744234978, "centrality_dgr": 0.26582278481012656, "centrality_eig": 0.08958027506645262, "color": "#97c2fc", "dgr": 126, "id": 428, "label": 428, "shape": "dot", "size": 10, "username": "RepStefanik"}, {"centrality_between": 0.016859674922057966, "centrality_dgr": 0.38396624472573837, "centrality_eig": 0.16284923539657067, "color": "#97c2fc", "dgr": 182, "id": 208, "label": 208, "shape": "dot", "size": 10, "username": "RepFranklin"}, {"centrality_between": 0.010075369508322822, "centrality_dgr": 0.26371308016877637, "centrality_eig": 0.1108363565352948, "color": "#97c2fc", "dgr": 125, "id": 137, "label": 137, "shape": "dot", "size": 10, "username": "RepKatCammack"}, {"centrality_between": 0.01246728421875797, "centrality_dgr": 0.2911392405063291, "centrality_eig": 0.09909373678232287, "color": "#97c2fc", "dgr": 138, "id": 92, "label": 92, "shape": "dot", "size": 10, "username": "RepAdams"}, {"centrality_between": 0.007076678848471229, "centrality_dgr": 0.20464135021097044, "centrality_eig": 0.0810553242466752, "color": "#97c2fc", "dgr": 97, "id": 370, "label": 370, "shape": "dot", "size": 10, "username": "RepPfluger"}, {"centrality_between": 0.0022454232983832594, "centrality_dgr": 0.18565400843881855, "centrality_eig": 0.11012535860513671, "color": "#97c2fc", "dgr": 88, "id": 246, "label": 246, "shape": "dot", "size": 10, "username": "CongressmanHice"}, {"centrality_between": 0.030683029768814818, "centrality_dgr": 0.3945147679324894, "centrality_eig": 0.09800316950784475, "color": "#97c2fc", "dgr": 187, "id": 254, "label": 254, "shape": "dot", "size": 10, "username": "LeaderHoyer"}, {"centrality_between": 0.027177654998646057, "centrality_dgr": 0.4008438818565401, "centrality_eig": 0.08726436874157104, "color": "#97c2fc", "dgr": 190, "id": 393, "label": 393, "shape": "dot", "size": 10, "username": "RepBobbyRush"}, {"centrality_between": 0.014341895456150286, "centrality_dgr": 0.28902953586497887, "centrality_eig": 0.09304597008981891, "color": "#97c2fc", "dgr": 137, "id": 461, "label": 461, "shape": "dot", "size": 10, "username": "RepBonnie"}, {"centrality_between": 0.010674630779902158, "centrality_dgr": 0.3122362869198312, "centrality_eig": 0.10945678009751138, "color": "#97c2fc", "dgr": 148, "id": 111, "label": 111, "shape": "dot", "size": 10, "username": "RepDonBeyer"}, {"centrality_between": 0.015541875816039118, "centrality_dgr": 0.34388185654008435, "centrality_eig": 0.1046318399304834, "color": "#97c2fc", "dgr": 163, "id": 303, "label": 303, "shape": "dot", "size": 10, "username": "RepAndyLevin"}, {"centrality_between": 0.002713164921675092, "centrality_dgr": 0.1962025316455696, "centrality_eig": 0.07795358355960055, "color": "#97c2fc", "dgr": 93, "id": 400, "label": 400, "shape": "dot", "size": 10, "username": "RepMGS"}, {"centrality_between": 0.004103229306505293, "centrality_dgr": 0.24261603375527424, "centrality_eig": 0.08678314903202872, "color": "#97c2fc", "dgr": 115, "id": 401, "label": 401, "shape": "dot", "size": 10, "username": "janschakowsky"}, {"centrality_between": 0.01061649852042528, "centrality_dgr": 0.3122362869198312, "centrality_eig": 0.10583667871092967, "color": "#97c2fc", "dgr": 148, "id": 147, "label": 147, "shape": "dot", "size": 10, "username": "RepCasten"}, {"centrality_between": 0.006696331858578438, "centrality_dgr": 0.2552742616033755, "centrality_eig": 0.0917071416623464, "color": "#97c2fc", "dgr": 121, "id": 215, "label": 215, "shape": "dot", "size": 10, "username": "RepChuyGarcia"}]);
+                  edges = new vis.DataSet([{"from": 385, "to": 386, "width": 1}, {"from": 385, "to": 130, "width": 1}, {"from": 385, "to": 132, "width": 1}, {"from": 385, "to": 389, "width": 1}, {"from": 385, "to": 134, "width": 1}, {"from": 385, "to": 261, "width": 1}, {"from": 385, "to": 269, "width": 1}, {"from": 385, "to": 143, "width": 1}, {"from": 385, "to": 161, "width": 1}, {"from": 385, "to": 417, "width": 1}, {"from": 385, "to": 301, "width": 1}, {"from": 385, "to": 188, "width": 1}, {"from": 385, "to": 190, "width": 1}, {"from": 385, "to": 318, "width": 1}, {"from": 385, "to": 192, "width": 1}, {"from": 385, "to": 452, "width": 1}, {"from": 385, "to": 324, "width": 1}, {"from": 385, "to": 335, "width": 1}, {"from": 385, "to": 343, "width": 1}, {"from": 385, "to": 350, "width": 1}, {"from": 385, "to": 354, "width": 1}, {"from": 385, "to": 103, "width": 1}, {"from": 385, "to": 105, "width": 1}, {"from": 385, "to": 113, "width": 1}, {"from": 385, "to": 242, "width": 1}, {"from": 385, "to": 116, "width": 1}, {"from": 385, "to": 244, "width": 1}, {"from": 385, "to": 245, "width": 1}, {"from": 385, "to": 382, "width": 1}, {"from": 130, "to": 382, "width": 1}, {"from": 130, "to": 322, "width": 1}, {"from": 130, "to": 132, "width": 1}, {"from": 130, "to": 389, "width": 1}, {"from": 130, "to": 134, "width": 1}, {"from": 130, "to": 269, "width": 1}, {"from": 130, "to": 399, "width": 1}, {"from": 130, "to": 276, "width": 1}, {"from": 130, "to": 343, "width": 1}, {"from": 130, "to": 417, "width": 1}, {"from": 130, "to": 354, "width": 1}, {"from": 130, "to": 103, "width": 1}, {"from": 130, "to": 105, "width": 1}, {"from": 130, "to": 428, "width": 1}, {"from": 130, "to": 113, "width": 1}, {"from": 130, "to": 242, "width": 1}, {"from": 130, "to": 116, "width": 1}, {"from": 130, "to": 245, "width": 1}, {"from": 130, "to": 190, "width": 1}, {"from": 130, "to": 318, "width": 1}, {"from": 382, "to": 192, "width": 1}, {"from": 382, "to": 386, "width": 1}, {"from": 382, "to": 261, "width": 1}, {"from": 382, "to": 335, "width": 1}, {"from": 382, "to": 208, "width": 1}, {"from": 382, "to": 343, "width": 1}, {"from": 382, "to": 417, "width": 1}, {"from": 382, "to": 354, "width": 1}, {"from": 382, "to": 103, "width": 1}, {"from": 382, "to": 105, "width": 1}, {"from": 382, "to": 113, "width": 1}, {"from": 382, "to": 242, "width": 1}, {"from": 382, "to": 188, "width": 1}, {"from": 382, "to": 244, "width": 1}, {"from": 382, "to": 190, "width": 1}, {"from": 382, "to": 318, "width": 1}, {"from": 132, "to": 192, "width": 1}, {"from": 132, "to": 322, "width": 1}, {"from": 132, "to": 324, "width": 1}, {"from": 132, "to": 261, "width": 1}, {"from": 132, "to": 389, "width": 1}, {"from": 132, "to": 452, "width": 1}, {"from": 132, "to": 386, "width": 1}, {"from": 132, "to": 137, "width": 1}, {"from": 132, "to": 269, "width": 1}, {"from": 132, "to": 335, "width": 1}, {"from": 132, "to": 208, "width": 1}, {"from": 132, "to": 399, "width": 1}, {"from": 132, "to": 276, "width": 1}, {"from": 132, "to": 343, "width": 1}, {"from": 132, "to": 92, "width": 1}, {"from": 132, "to": 417, "width": 1}, {"from": 132, "to": 354, "width": 1}, {"from": 132, "to": 105, "width": 1}, {"from": 132, "to": 301, "width": 1}, {"from": 132, "to": 113, "width": 1}, {"from": 132, "to": 116, "width": 1}, {"from": 132, "to": 188, "width": 1}, {"from": 132, "to": 190, "width": 1}, {"from": 389, "to": 386, "width": 1}, {"from": 389, "to": 137, "width": 1}, {"from": 389, "to": 269, "width": 1}, {"from": 389, "to": 399, "width": 1}, {"from": 389, "to": 161, "width": 1}, {"from": 389, "to": 428, "width": 1}, {"from": 389, "to": 301, "width": 1}, {"from": 389, "to": 188, "width": 1}, {"from": 389, "to": 190, "width": 1}, {"from": 389, "to": 318, "width": 1}, {"from": 389, "to": 192, "width": 1}, {"from": 389, "to": 322, "width": 1}, {"from": 389, "to": 324, "width": 1}, {"from": 389, "to": 452, "width": 1}, {"from": 389, "to": 208, "width": 1}, {"from": 389, "to": 343, "width": 1}, {"from": 389, "to": 350, "width": 1}, {"from": 389, "to": 354, "width": 1}, {"from": 389, "to": 105, "width": 1}, {"from": 389, "to": 113, "width": 1}, {"from": 389, "to": 242, "width": 1}, {"from": 389, "to": 370, "width": 1}, {"from": 389, "to": 116, "width": 1}, {"from": 389, "to": 244, "width": 1}, {"from": 389, "to": 245, "width": 1}, {"from": 389, "to": 246, "width": 1}, {"from": 389, "to": 254, "width": 1}, {"from": 134, "to": 322, "width": 1}, {"from": 134, "to": 452, "width": 1}, {"from": 134, "to": 269, "width": 1}, {"from": 134, "to": 143, "width": 1}, {"from": 134, "to": 399, "width": 1}, {"from": 134, "to": 350, "width": 1}, {"from": 134, "to": 354, "width": 1}, {"from": 134, "to": 105, "width": 1}, {"from": 134, "to": 428, "width": 1}, {"from": 134, "to": 301, "width": 1}, {"from": 134, "to": 113, "width": 1}, {"from": 134, "to": 370, "width": 1}, {"from": 134, "to": 116, "width": 1}, {"from": 134, "to": 190, "width": 1}, {"from": 261, "to": 192, "width": 1}, {"from": 261, "to": 322, "width": 1}, {"from": 261, "to": 386, "width": 1}, {"from": 261, "to": 324, "width": 1}, {"from": 261, "to": 137, "width": 1}, {"from": 261, "to": 399, "width": 1}, {"from": 261, "to": 208, "width": 1}, {"from": 261, "to": 276, "width": 1}, {"from": 261, "to": 343, "width": 1}, {"from": 261, "to": 417, "width": 1}, {"from": 261, "to": 354, "width": 1}, {"from": 261, "to": 105, "width": 1}, {"from": 261, "to": 428, "width": 1}, {"from": 261, "to": 190, "width": 1}, {"from": 261, "to": 244, "width": 1}, {"from": 261, "to": 245, "width": 1}, {"from": 261, "to": 188, "width": 1}, {"from": 386, "to": 137, "width": 1}, {"from": 386, "to": 143, "width": 1}, {"from": 386, "to": 161, "width": 1}, {"from": 386, "to": 428, "width": 1}, {"from": 386, "to": 190, "width": 1}, {"from": 386, "to": 318, "width": 1}, {"from": 386, "to": 192, "width": 1}, {"from": 386, "to": 324, "width": 1}, {"from": 386, "to": 452, "width": 1}, {"from": 386, "to": 335, "width": 1}, {"from": 386, "to": 208, "width": 1}, {"from": 386, "to": 343, "width": 1}, {"from": 386, "to": 350, "width": 1}, {"from": 386, "to": 354, "width": 1}, {"from": 386, "to": 105, "width": 1}, {"from": 386, "to": 113, "width": 1}, {"from": 386, "to": 242, "width": 1}, {"from": 386, "to": 370, "width": 1}, {"from": 386, "to": 116, "width": 1}, {"from": 386, "to": 244, "width": 1}, {"from": 386, "to": 246, "width": 1}, {"from": 386, "to": 245, "width": 1}, {"from": 393, "to": 461, "width": 1}, {"from": 393, "to": 111, "width": 1}, {"from": 393, "to": 303, "width": 1}, {"from": 393, "to": 400, "width": 1}, {"from": 393, "to": 401, "width": 1}, {"from": 393, "to": 147, "width": 1}, {"from": 393, "to": 113, "width": 1}, {"from": 393, "to": 215, "width": 1}, {"from": 393, "to": 92, "width": 1}, {"from": 393, "to": 254, "width": 1}, {"from": 137, "to": 192, "width": 1}, {"from": 137, "to": 322, "width": 1}, {"from": 137, "to": 452, "width": 1}, {"from": 137, "to": 269, "width": 1}, {"from": 137, "to": 143, "width": 1}, {"from": 137, "to": 335, "width": 1}, {"from": 137, "to": 208, "width": 1}, {"from": 137, "to": 399, "width": 1}, {"from": 137, "to": 276, "width": 1}, {"from": 137, "to": 354, "width": 1}, {"from": 137, "to": 103, "width": 1}, {"from": 137, "to": 105, "width": 1}, {"from": 137, "to": 301, "width": 1}, {"from": 137, "to": 113, "width": 1}, {"from": 137, "to": 242, "width": 1}, {"from": 137, "to": 370, "width": 1}, {"from": 137, "to": 245, "width": 1}, {"from": 137, "to": 246, "width": 1}, {"from": 137, "to": 188, "width": 1}, {"from": 137, "to": 190, "width": 1}, {"from": 269, "to": 399, "width": 1}, {"from": 269, "to": 143, "width": 1}, {"from": 269, "to": 276, "width": 1}, {"from": 269, "to": 161, "width": 1}, {"from": 269, "to": 417, "width": 1}, {"from": 269, "to": 428, "width": 1}, {"from": 269, "to": 301, "width": 1}, {"from": 269, "to": 190, "width": 1}, {"from": 269, "to": 318, "width": 1}, {"from": 269, "to": 192, "width": 1}, {"from": 269, "to": 322, "width": 1}, {"from": 269, "to": 324, "width": 1}, {"from": 269, "to": 452, "width": 1}, {"from": 269, "to": 335, "width": 1}, {"from": 269, "to": 208, "width": 1}, {"from": 269, "to": 343, "width": 1}, {"from": 269, "to": 350, "width": 1}, {"from": 269, "to": 354, "width": 1}, {"from": 269, "to": 105, "width": 1}, {"from": 269, "to": 113, "width": 1}, {"from": 269, "to": 242, "width": 1}, {"from": 269, "to": 370, "width": 1}, {"from": 269, "to": 116, "width": 1}, {"from": 269, "to": 245, "width": 1}, {"from": 269, "to": 246, "width": 1}, {"from": 269, "to": 254, "width": 1}, {"from": 143, "to": 192, "width": 1}, {"from": 143, "to": 322, "width": 1}, {"from": 143, "to": 324, "width": 1}, {"from": 143, "to": 461, "width": 1}, {"from": 143, "to": 335, "width": 1}, {"from": 143, "to": 208, "width": 1}, {"from": 143, "to": 399, "width": 1}, {"from": 143, "to": 276, "width": 1}, {"from": 143, "to": 343, "width": 1}, {"from": 143, "to": 417, "width": 1}, {"from": 143, "to": 354, "width": 1}, {"from": 143, "to": 105, "width": 1}, {"from": 143, "to": 428, "width": 1}, {"from": 143, "to": 242, "width": 1}, {"from": 143, "to": 370, "width": 1}, {"from": 143, "to": 244, "width": 1}, {"from": 143, "to": 246, "width": 1}, {"from": 143, "to": 188, "width": 1}, {"from": 143, "to": 190, "width": 1}, {"from": 400, "to": 461, "width": 1}, {"from": 400, "to": 303, "width": 1}, {"from": 400, "to": 111, "width": 1}, {"from": 400, "to": 92, "width": 1}, {"from": 400, "to": 254, "width": 1}, {"from": 401, "to": 461, "width": 1}, {"from": 401, "to": 303, "width": 1}, {"from": 401, "to": 147, "width": 1}, {"from": 401, "to": 215, "width": 1}, {"from": 401, "to": 92, "width": 1}, {"from": 401, "to": 254, "width": 1}, {"from": 399, "to": 276, "width": 1}, {"from": 399, "to": 161, "width": 1}, {"from": 399, "to": 417, "width": 1}, {"from": 399, "to": 428, "width": 1}, {"from": 399, "to": 301, "width": 1}, {"from": 399, "to": 188, "width": 1}, {"from": 399, "to": 190, "width": 1}, {"from": 399, "to": 322, "width": 1}, {"from": 399, "to": 324, "width": 1}, {"from": 399, "to": 452, "width": 1}, {"from": 399, "to": 335, "width": 1}, {"from": 399, "to": 208, "width": 1}, {"from": 399, "to": 343, "width": 1}, {"from": 399, "to": 350, "width": 1}, {"from": 399, "to": 103, "width": 1}, {"from": 399, "to": 105, "width": 1}, {"from": 399, "to": 113, "width": 1}, {"from": 399, "to": 242, "width": 1}, {"from": 399, "to": 370, "width": 1}, {"from": 399, "to": 116, "width": 1}, {"from": 399, "to": 244, "width": 1}, {"from": 399, "to": 245, "width": 1}, {"from": 399, "to": 246, "width": 1}, {"from": 147, "to": 461, "width": 1}, {"from": 147, "to": 303, "width": 1}, {"from": 147, "to": 111, "width": 1}, {"from": 147, "to": 215, "width": 1}, {"from": 147, "to": 92, "width": 1}, {"from": 147, "to": 254, "width": 1}, {"from": 276, "to": 192, "width": 1}, {"from": 276, "to": 322, "width": 1}, {"from": 276, "to": 324, "width": 1}, {"from": 276, "to": 335, "width": 1}, {"from": 276, "to": 208, "width": 1}, {"from": 276, "to": 343, "width": 1}, {"from": 276, "to": 354, "width": 1}, {"from": 276, "to": 105, "width": 1}, {"from": 276, "to": 428, "width": 1}, {"from": 276, "to": 113, "width": 1}, {"from": 276, "to": 370, "width": 1}, {"from": 276, "to": 245, "width": 1}, {"from": 276, "to": 246, "width": 1}, {"from": 276, "to": 188, "width": 1}, {"from": 276, "to": 190, "width": 1}, {"from": 161, "to": 322, "width": 1}, {"from": 161, "to": 324, "width": 1}, {"from": 161, "to": 208, "width": 1}, {"from": 161, "to": 343, "width": 1}, {"from": 161, "to": 417, "width": 1}, {"from": 161, "to": 354, "width": 1}, {"from": 161, "to": 105, "width": 1}, {"from": 161, "to": 190, "width": 1}, {"from": 161, "to": 113, "width": 1}, {"from": 161, "to": 242, "width": 1}, {"from": 161, "to": 116, "width": 1}, {"from": 161, "to": 245, "width": 1}, {"from": 161, "to": 246, "width": 1}, {"from": 161, "to": 254, "width": 1}, {"from": 161, "to": 188, "width": 1}, {"from": 161, "to": 318, "width": 1}, {"from": 417, "to": 192, "width": 1}, {"from": 417, "to": 322, "width": 1}, {"from": 417, "to": 452, "width": 1}, {"from": 417, "to": 335, "width": 1}, {"from": 417, "to": 208, "width": 1}, {"from": 417, "to": 103, "width": 1}, {"from": 417, "to": 428, "width": 1}, {"from": 417, "to": 242, "width": 1}, {"from": 417, "to": 370, "width": 1}, {"from": 417, "to": 244, "width": 1}, {"from": 417, "to": 190, "width": 1}, {"from": 428, "to": 301, "width": 1}, {"from": 428, "to": 188, "width": 1}, {"from": 428, "to": 190, "width": 1}, {"from": 428, "to": 192, "width": 1}, {"from": 428, "to": 322, "width": 1}, {"from": 428, "to": 324, "width": 1}, {"from": 428, "to": 452, "width": 1}, {"from": 428, "to": 335, "width": 1}, {"from": 428, "to": 208, "width": 1}, {"from": 428, "to": 343, "width": 1}, {"from": 428, "to": 350, "width": 1}, {"from": 428, "to": 354, "width": 1}, {"from": 428, "to": 105, "width": 1}, {"from": 428, "to": 242, "width": 1}, {"from": 428, "to": 370, "width": 1}, {"from": 428, "to": 116, "width": 1}, {"from": 428, "to": 244, "width": 1}, {"from": 428, "to": 245, "width": 1}, {"from": 301, "to": 322, "width": 1}, {"from": 301, "to": 324, "width": 1}, {"from": 301, "to": 335, "width": 1}, {"from": 301, "to": 208, "width": 1}, {"from": 301, "to": 350, "width": 1}, {"from": 301, "to": 354, "width": 1}, {"from": 301, "to": 105, "width": 1}, {"from": 301, "to": 113, "width": 1}, {"from": 301, "to": 242, "width": 1}, {"from": 301, "to": 116, "width": 1}, {"from": 301, "to": 244, "width": 1}, {"from": 301, "to": 246, "width": 1}, {"from": 301, "to": 245, "width": 1}, {"from": 301, "to": 190, "width": 1}, {"from": 303, "to": 461, "width": 1}, {"from": 303, "to": 242, "width": 1}, {"from": 303, "to": 215, "width": 1}, {"from": 303, "to": 92, "width": 1}, {"from": 303, "to": 254, "width": 1}, {"from": 188, "to": 318, "width": 1}, {"from": 188, "to": 192, "width": 1}, {"from": 188, "to": 322, "width": 1}, {"from": 188, "to": 324, "width": 1}, {"from": 188, "to": 452, "width": 1}, {"from": 188, "to": 335, "width": 1}, {"from": 188, "to": 208, "width": 1}, {"from": 188, "to": 343, "width": 1}, {"from": 188, "to": 92, "width": 1}, {"from": 188, "to": 350, "width": 1}, {"from": 188, "to": 354, "width": 1}, {"from": 188, "to": 105, "width": 1}, {"from": 188, "to": 113, "width": 1}, {"from": 188, "to": 242, "width": 1}, {"from": 188, "to": 116, "width": 1}, {"from": 188, "to": 244, "width": 1}, {"from": 188, "to": 245, "width": 1}, {"from": 188, "to": 246, "width": 1}, {"from": 190, "to": 318, "width": 1}, {"from": 190, "to": 192, "width": 1}, {"from": 190, "to": 322, "width": 1}, {"from": 190, "to": 324, "width": 1}, {"from": 190, "to": 452, "width": 1}, {"from": 190, "to": 208, "width": 1}, {"from": 190, "to": 343, "width": 1}, {"from": 190, "to": 354, "width": 1}, {"from": 190, "to": 103, "width": 1}, {"from": 190, "to": 105, "width": 1}, {"from": 190, "to": 113, "width": 1}, {"from": 190, "to": 242, "width": 1}, {"from": 190, "to": 370, "width": 1}, {"from": 190, "to": 116, "width": 1}, {"from": 190, "to": 244, "width": 1}, {"from": 190, "to": 246, "width": 1}, {"from": 190, "to": 245, "width": 1}, {"from": 318, "to": 324, "width": 1}, {"from": 318, "to": 452, "width": 1}, {"from": 318, "to": 343, "width": 1}, {"from": 318, "to": 350, "width": 1}, {"from": 318, "to": 354, "width": 1}, {"from": 318, "to": 113, "width": 1}, {"from": 318, "to": 242, "width": 1}, {"from": 318, "to": 116, "width": 1}, {"from": 318, "to": 246, "width": 1}, {"from": 192, "to": 322, "width": 1}, {"from": 192, "to": 452, "width": 1}, {"from": 192, "to": 324, "width": 1}, {"from": 192, "to": 335, "width": 1}, {"from": 192, "to": 208, "width": 1}, {"from": 192, "to": 354, "width": 1}, {"from": 192, "to": 103, "width": 1}, {"from": 192, "to": 105, "width": 1}, {"from": 192, "to": 370, "width": 1}, {"from": 192, "to": 242, "width": 1}, {"from": 192, "to": 244, "width": 1}, {"from": 192, "to": 116, "width": 1}, {"from": 192, "to": 246, "width": 1}, {"from": 322, "to": 324, "width": 1}, {"from": 322, "to": 452, "width": 1}, {"from": 322, "to": 461, "width": 1}, {"from": 322, "to": 335, "width": 1}, {"from": 322, "to": 208, "width": 1}, {"from": 322, "to": 215, "width": 1}, {"from": 322, "to": 343, "width": 1}, {"from": 322, "to": 350, "width": 1}, {"from": 322, "to": 354, "width": 1}, {"from": 322, "to": 103, "width": 1}, {"from": 322, "to": 105, "width": 1}, {"from": 322, "to": 111, "width": 1}, {"from": 322, "to": 113, "width": 1}, {"from": 322, "to": 242, "width": 1}, {"from": 322, "to": 370, "width": 1}, {"from": 322, "to": 116, "width": 1}, {"from": 322, "to": 244, "width": 1}, {"from": 322, "to": 245, "width": 1}, {"from": 322, "to": 246, "width": 1}, {"from": 322, "to": 254, "width": 1}, {"from": 452, "to": 335, "width": 1}, {"from": 452, "to": 208, "width": 1}, {"from": 452, "to": 350, "width": 1}, {"from": 452, "to": 242, "width": 1}, {"from": 452, "to": 370, "width": 1}, {"from": 452, "to": 116, "width": 1}, {"from": 452, "to": 244, "width": 1}, {"from": 452, "to": 245, "width": 1}, {"from": 324, "to": 335, "width": 1}, {"from": 324, "to": 208, "width": 1}, {"from": 324, "to": 343, "width": 1}, {"from": 324, "to": 350, "width": 1}, {"from": 324, "to": 354, "width": 1}, {"from": 324, "to": 103, "width": 1}, {"from": 324, "to": 105, "width": 1}, {"from": 324, "to": 113, "width": 1}, {"from": 324, "to": 242, "width": 1}, {"from": 324, "to": 370, "width": 1}, {"from": 324, "to": 116, "width": 1}, {"from": 324, "to": 244, "width": 1}, {"from": 324, "to": 246, "width": 1}, {"from": 461, "to": 215, "width": 1}, {"from": 461, "to": 92, "width": 1}, {"from": 461, "to": 111, "width": 1}, {"from": 461, "to": 113, "width": 1}, {"from": 461, "to": 254, "width": 1}, {"from": 335, "to": 208, "width": 1}, {"from": 335, "to": 343, "width": 1}, {"from": 335, "to": 92, "width": 1}, {"from": 335, "to": 350, "width": 1}, {"from": 335, "to": 354, "width": 1}, {"from": 335, "to": 103, "width": 1}, {"from": 335, "to": 113, "width": 1}, {"from": 335, "to": 242, "width": 1}, {"from": 335, "to": 370, "width": 1}, {"from": 335, "to": 116, "width": 1}, {"from": 335, "to": 244, "width": 1}, {"from": 208, "to": 343, "width": 1}, {"from": 208, "to": 350, "width": 1}, {"from": 208, "to": 354, "width": 1}, {"from": 208, "to": 105, "width": 1}, {"from": 208, "to": 113, "width": 1}, {"from": 208, "to": 370, "width": 1}, {"from": 208, "to": 242, "width": 1}, {"from": 208, "to": 244, "width": 1}, {"from": 208, "to": 245, "width": 1}, {"from": 208, "to": 246, "width": 1}, {"from": 215, "to": 111, "width": 1}, {"from": 215, "to": 92, "width": 1}, {"from": 215, "to": 254, "width": 1}, {"from": 343, "to": 103, "width": 1}, {"from": 343, "to": 105, "width": 1}, {"from": 343, "to": 113, "width": 1}, {"from": 343, "to": 370, "width": 1}, {"from": 343, "to": 246, "width": 1}, {"from": 92, "to": 254, "width": 1}, {"from": 350, "to": 103, "width": 1}, {"from": 350, "to": 105, "width": 1}, {"from": 350, "to": 113, "width": 1}, {"from": 350, "to": 242, "width": 1}, {"from": 350, "to": 116, "width": 1}, {"from": 350, "to": 244, "width": 1}, {"from": 350, "to": 245, "width": 1}, {"from": 350, "to": 254, "width": 1}, {"from": 354, "to": 105, "width": 1}, {"from": 354, "to": 113, "width": 1}, {"from": 354, "to": 242, "width": 1}, {"from": 354, "to": 370, "width": 1}, {"from": 354, "to": 116, "width": 1}, {"from": 354, "to": 244, "width": 1}, {"from": 354, "to": 246, "width": 1}, {"from": 103, "to": 105, "width": 1}, {"from": 103, "to": 113, "width": 1}, {"from": 103, "to": 242, "width": 1}, {"from": 105, "to": 242, "width": 1}, {"from": 105, "to": 370, "width": 1}, {"from": 105, "to": 116, "width": 1}, {"from": 105, "to": 244, "width": 1}, {"from": 105, "to": 245, "width": 1}, {"from": 105, "to": 246, "width": 1}, {"from": 111, "to": 370, "width": 1}, {"from": 111, "to": 254, "width": 1}, {"from": 113, "to": 242, "width": 1}, {"from": 113, "to": 370, "width": 1}, {"from": 113, "to": 116, "width": 1}, {"from": 113, "to": 244, "width": 1}, {"from": 113, "to": 245, "width": 1}, {"from": 113, "to": 246, "width": 1}, {"from": 242, "to": 116, "width": 1}, {"from": 242, "to": 245, "width": 1}, {"from": 242, "to": 246, "width": 1}, {"from": 370, "to": 116, "width": 1}, {"from": 370, "to": 244, "width": 1}, {"from": 116, "to": 244, "width": 1}, {"from": 116, "to": 246, "width": 1}, {"from": 244, "to": 245, "width": 1}, {"from": 244, "to": 246, "width": 1}, {"from": 246, "to": 245, "width": 1}, {"from": 246, "to": 254, "width": 1}, {"from": 245, "to": 254, "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"minVelocity": 0.75, "solver": "repulsion"}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
