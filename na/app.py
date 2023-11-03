@@ -133,6 +133,6 @@ st.markdown("""
 
 ### show the html file
 
-HtmlFile = open("nx.html", 'r', encoding='utf-8')
+HtmlFile = open("na/nx.html", 'r', encoding='utf-8')
 source_code = HtmlFile.read() 
 components.html(source_code, height = 700,width=700)
